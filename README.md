@@ -220,22 +220,29 @@ ToDoApp/
 
 ---
 
-## Future Improvements
+## Deployment (Fly.io & GitHub Actions)
 
-If given more time, I would implement:
+This project is configured for automated CI/CD deployment to [Fly.io](https://fly.io):
 
-1. **Authentication & Authorization** — JWT-based auth with user registration, so each user manages their own tasks.
-2. **Pagination & Sorting** — Cursor-based pagination with configurable sort fields for large datasets.
-3. **Unit & Integration Tests** — xUnit tests for controller logic, EF Core in-memory provider for integration tests, and React Testing Library for component tests.
-4. **Soft Delete** — `IsDeleted` + `DeletedAt` fields instead of hard delete, enabling undo and audit trails.
-5. **Real-time Updates** — SignalR WebSocket integration for live task updates across browser tabs.
-6. **Subtasks** — Self-referencing `ParentId` for hierarchical task decomposition.
-7. **File Attachments** — Azure Blob Storage or local file storage for task-related files.
-8. **Email Notifications** — Due date reminders via background service (Hangfire or native `BackgroundService`).
-9. **Docker Compose** — Single-command deployment with containerized backend + frontend.
-10. **CI/CD Pipeline** — GitHub Actions for automated testing, building, and deployment.
-11. **Rate Limiting** — ASP.NET Core rate limiting middleware to prevent API abuse.
-12. **Caching** — Response caching for the summary endpoint and ETag support for list queries.
+- **Dockerized**: A 3-stage `Dockerfile` builds both the React frontend and .NET backend into a single lightweight alpine container.
+- **Persistent SQLite**: A Fly.io volume (`taskflow_data`) is mounted to `/data` ensuring `todos.db` survives container restarts and deployments.
+- **CI/CD Pipeline**: GitHub Actions (`.github/workflows/fly.yml`) automatically builds and deploys to Fly.io whenever code is pushed to the `main` branch.
+
+---
+
+## Future Improvements (TODO)
+
+### 🔒 Security & Access Control (Planned Architecture)
+To restrict access and prevent bot abuse, the following security measures are planned:
+- [ ] **Google OAuth Integration**: Users must authenticate via Google to access the app.
+- [ ] **Email Allowlist (Whitelist)**: A database table of allowed emails. Only pre-approved Google accounts can log in.
+- [ ] **API Rate Limiting**: ASP.NET Core rate limiting middleware to prevent brute-force attacks and bot abuse.
+
+### Other Improvements
+- [ ] **Pagination & Sorting** — Cursor-based pagination with configurable sort fields for large datasets.
+- [ ] **Unit & Integration Tests** — xUnit tests for controller logic and React Testing Library for components.
+- [ ] **Soft Delete** — `IsDeleted` + `DeletedAt` fields instead of hard delete.
+- [ ] **Real-time Updates** — SignalR WebSocket integration for live task updates across browser tabs.
 
 ---
 
