@@ -1,0 +1,21 @@
+# .NET Core
+backend/**/bin/
+backend/**/obj/
+backend/**/*.user
+backend/**/*.suo
+backend/**/*.db
+backend/**/*.sqlite
+
+# Node.js / React
+frontend/node_modules/
+frontend/dist/
+frontend/.env.local
+frontend/.env.*.local
+frontend/npm-debug.log*
+
+# OS / Editor
+.vscode/
+.vs/
+.idea/
+.DS_Store
+Thumbs.db

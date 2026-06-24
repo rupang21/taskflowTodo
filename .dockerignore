@@ -1,0 +1,36 @@
+# ── .NET ──
+backend/**/bin/
+backend/**/obj/
+backend/**/*.user
+backend/**/*.suo
+backend/**/*.db
+backend/**/*.sqlite
+
+# ── Node.js ──
+frontend/node_modules/
+frontend/dist/
+frontend/.env.local
+frontend/.env.*.local
+frontend/npm-debug.log*
+
+# ── Docker ──
+Dockerfile
+docker-compose*.yml
+.dockerignore
+
+# ── Fly.io ──
+fly.toml
+
+# ── Git / IDE ──
+.git/
+.gitignore
+.vscode/
+.vs/
+.idea/
+.DS_Store
+Thumbs.db
+
+# ── Docs ──
+docs/
+README.md
+*.md
