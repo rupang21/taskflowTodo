@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { todoApi } from './services/todoApi';
+import { GoogleLogin } from '@react-oauth/google';
+import { todoApi, authApi } from './services/todoApi';
 import './App.css';
 
 /* ════════════════════════════════════════════════
@@ -435,9 +436,32 @@ function SimpleView({ todos, loading, error, onAdd, onToggle, onDelete, onClearE
 }
 
 /* ════════════════════════════════
+   Login View Component
+   ════════════════════════════════ */
+function LoginView({ onLoginSuccess, error }) {
+  return (
+    <div className="login-container" style={{ textAlign: 'center', marginTop: '10vh' }}>
+      <div style={{ marginBottom: '2rem' }}>
+        <h1>Welcome to ToDo</h1>
+        <p>Please sign in to manage your tasks</p>
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'center' }}>
+        <GoogleLogin 
+          onSuccess={onLoginSuccess}
+          onError={() => console.error('Login Failed')}
+        />
+      </div>
+      {error && <p style={{ color: 'var(--danger)', marginTop: '1rem' }}>{error}</p>}
+    </div>
+  );
+}
+
+/* ════════════════════════════════
    Main App Component
    ════════════════════════════════ */
 function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState(!!localStorage.getItem('token'));
+  const [user, setUser] = useState(() => JSON.parse(localStorage.getItem('user') || 'null'));
   const [viewMode, setViewMode] = useState(() => localStorage.getItem('taskflow-mode') || 'full');
   const [todos, setTodos] = useState([]);
   const [summary, setSummary] = useState(null);
@@ -477,8 +501,30 @@ function App() {
   }, [filters]);
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    if (isAuthenticated) {
+      fetchData();
+    }
+  }, [isAuthenticated, fetchData]);
+
+  const handleLoginSuccess = async (credentialResponse) => {
+    try {
+      setError(null);
+      const res = await authApi.googleLogin(credentialResponse.credential);
+      localStorage.setItem('token', res.token);
+      localStorage.setItem('user', JSON.stringify(res.user));
+      setUser(res.user);
+      setIsAuthenticated(true);
+    } catch (err) {
+      setError('Login failed. Please try again.');
+    }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    setIsAuthenticated(false);
+    setUser(null);
+  };
 
   // ── Debounced search ──
   const [searchTimeout, setSearchTimeout] = useState(null);
@@ -555,20 +601,34 @@ function App() {
     }
   };
 
+  if (!isAuthenticated) {
+    return <LoginView onLoginSuccess={handleLoginSuccess} error={error} />;
+  }
+
   return (
     <>
       {/* Header */}
       <header className="app-header">
         <div className="header-row">
-          <h1>TaskFlow</h1>
-          <button
-            className="mode-toggle"
-            onClick={toggleMode}
-            title={`Switch to ${viewMode === 'full' ? 'Simple' : 'Full'} mode`}
-            aria-label={`Switch to ${viewMode === 'full' ? 'Simple' : 'Full'} mode`}
-          >
-            {viewMode === 'full' ? '◉ Full' : '○ Simple'}
-          </button>
+          <h1>ToDo</h1>
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+            {user && <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Hi, {user.name}</span>}
+            <button className="btn-icon" onClick={handleLogout} title="Logout" aria-label="Logout">
+              <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                <polyline points="16 17 21 12 16 7"></polyline>
+                <line x1="21" y1="12" x2="9" y2="12"></line>
+              </svg>
+            </button>
+            <button
+              className="mode-toggle"
+              onClick={toggleMode}
+              title={`Switch to ${viewMode === 'full' ? 'Simple' : 'Full'} mode`}
+              aria-label={`Switch to ${viewMode === 'full' ? 'Simple' : 'Full'} mode`}
+            >
+              {viewMode === 'full' ? '◉ Full' : '○ Simple'}
+            </button>
+          </div>
         </div>
         <p>{viewMode === 'full' ? 'Organize your work, one task at a time' : 'Keep it simple'}</p>
         {viewMode === 'full' && <StatsBar summary={summary} />}

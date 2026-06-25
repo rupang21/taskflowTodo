@@ -1,3 +1,5 @@
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ToDoApp.Api.Data;
@@ -12,6 +14,7 @@ namespace ToDoApp.Api.Controllers
     /// </summary>
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize]
     public class TodosController : ControllerBase
     {
         private readonly AppDbContext _context;
@@ -23,18 +26,12 @@ namespace ToDoApp.Api.Controllers
             _logger = logger;
         }
 
+        private string CurrentUserId => User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+
         // ──────────────────────────────────────
         //  GET /api/todos
         //  List all todos with optional filters
         // ──────────────────────────────────────
-        /// <summary>
-        /// Retrieves all to-do items. Supports optional filtering by status, priority, and category.
-        /// </summary>
-        /// <param name="status">Filter by status (0=Pending, 1=InProgress, 2=Completed, 3=Cancelled)</param>
-        /// <param name="priority">Filter by priority (0=Low, 1=Medium, 2=High)</param>
-        /// <param name="category">Filter by category name (exact match)</param>
-        /// <param name="search">Search in title (partial match, case-insensitive)</param>
-        /// <returns>List of TodoResponseDto</returns>
         [HttpGet]
         [ProducesResponseType(typeof(IEnumerable<TodoResponseDto>), StatusCodes.Status200OK)]
         public async Task<ActionResult<IEnumerable<TodoResponseDto>>> GetAll(
@@ -43,7 +40,7 @@ namespace ToDoApp.Api.Controllers
             [FromQuery] string? category,
             [FromQuery] string? search)
         {
-            var query = _context.TodoItems.AsQueryable();
+            var query = _context.TodoItems.Where(t => t.UserId == CurrentUserId);
 
             // Apply filters
             if (status.HasValue)
@@ -64,7 +61,7 @@ namespace ToDoApp.Api.Controllers
                 .ThenByDescending(t => t.CreatedAt)
                 .ToListAsync();
 
-            _logger.LogInformation("Retrieved {Count} todo items", items.Count);
+            _logger.LogInformation("Retrieved {Count} todo items for user {UserId}", items.Count, CurrentUserId);
 
             return Ok(items.Select(TodoResponseDto.FromEntity));
         }
@@ -73,9 +70,6 @@ namespace ToDoApp.Api.Controllers
         //  GET /api/todos/{id}
         //  Get a single todo by ID
         // ──────────────────────────────────────
-        /// <summary>
-        /// Retrieves a single to-do item by its ID.
-        /// </summary>
         [HttpGet("{id:int}")]
         [ProducesResponseType(typeof(TodoResponseDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -83,9 +77,9 @@ namespace ToDoApp.Api.Controllers
         {
             var item = await _context.TodoItems.FindAsync(id);
 
-            if (item is null)
+            if (item is null || item.UserId != CurrentUserId)
             {
-                _logger.LogWarning("Todo item with ID {Id} not found", id);
+                _logger.LogWarning("Todo item with ID {Id} not found or unauthorized", id);
                 return NotFound(new { message = $"Todo item with ID {id} not found." });
             }
 
@@ -96,9 +90,6 @@ namespace ToDoApp.Api.Controllers
         //  POST /api/todos
         //  Create a new todo
         // ──────────────────────────────────────
-        /// <summary>
-        /// Creates a new to-do item.
-        /// </summary>
         [HttpPost]
         [ProducesResponseType(typeof(TodoResponseDto), StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -117,7 +108,8 @@ namespace ToDoApp.Api.Controllers
                 Status = TodoStatus.Pending,
                 IsCompleted = false,
                 CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
+                UpdatedAt = DateTime.UtcNow,
+                UserId = CurrentUserId
             };
 
             _context.TodoItems.Add(item);
@@ -135,9 +127,6 @@ namespace ToDoApp.Api.Controllers
         //  PUT /api/todos/{id}
         //  Full update of a todo
         // ──────────────────────────────────────
-        /// <summary>
-        /// Updates all fields of an existing to-do item.
-        /// </summary>
         [HttpPut("{id:int}")]
         [ProducesResponseType(typeof(TodoResponseDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -149,7 +138,7 @@ namespace ToDoApp.Api.Controllers
 
             var item = await _context.TodoItems.FindAsync(id);
 
-            if (item is null)
+            if (item is null || item.UserId != CurrentUserId)
             {
                 _logger.LogWarning("Cannot update: Todo item with ID {Id} not found", id);
                 return NotFound(new { message = $"Todo item with ID {id} not found." });
@@ -176,10 +165,6 @@ namespace ToDoApp.Api.Controllers
         //  PATCH /api/todos/{id}/toggle
         //  Toggle completion status
         // ──────────────────────────────────────
-        /// <summary>
-        /// Toggles the completion status of a to-do item.
-        /// Pending/InProgress → Completed, Completed → Pending.
-        /// </summary>
         [HttpPatch("{id:int}/toggle")]
         [ProducesResponseType(typeof(TodoResponseDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -187,7 +172,7 @@ namespace ToDoApp.Api.Controllers
         {
             var item = await _context.TodoItems.FindAsync(id);
 
-            if (item is null)
+            if (item is null || item.UserId != CurrentUserId)
             {
                 _logger.LogWarning("Cannot toggle: Todo item with ID {Id} not found", id);
                 return NotFound(new { message = $"Todo item with ID {id} not found." });
@@ -217,9 +202,6 @@ namespace ToDoApp.Api.Controllers
         //  DELETE /api/todos/{id}
         //  Delete a todo
         // ──────────────────────────────────────
-        /// <summary>
-        /// Permanently deletes a to-do item.
-        /// </summary>
         [HttpDelete("{id:int}")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -227,7 +209,7 @@ namespace ToDoApp.Api.Controllers
         {
             var item = await _context.TodoItems.FindAsync(id);
 
-            if (item is null)
+            if (item is null || item.UserId != CurrentUserId)
             {
                 _logger.LogWarning("Cannot delete: Todo item with ID {Id} not found", id);
                 return NotFound(new { message = $"Todo item with ID {id} not found." });
@@ -245,14 +227,11 @@ namespace ToDoApp.Api.Controllers
         //  GET /api/todos/summary
         //  Dashboard statistics
         // ──────────────────────────────────────
-        /// <summary>
-        /// Returns aggregated summary statistics for all to-do items.
-        /// </summary>
         [HttpGet("summary")]
         [ProducesResponseType(typeof(TodoSummaryDto), StatusCodes.Status200OK)]
         public async Task<ActionResult<TodoSummaryDto>> GetSummary()
         {
-            var items = await _context.TodoItems.ToListAsync();
+            var items = await _context.TodoItems.Where(t => t.UserId == CurrentUserId).ToListAsync();
             var now = DateTime.UtcNow;
 
             var summary = new TodoSummaryDto

@@ -12,13 +12,24 @@ const API_BASE_URL = '/api/todos';
  * Parses JSON responses and throws descriptive errors on failure.
  */
 async function request(url, options = {}) {
+  const token = localStorage.getItem('token');
+  const headers = {
+    'Content-Type': 'application/json',
+    ...(token && { Authorization: `Bearer ${token}` }),
+    ...options.headers,
+  };
+
   const response = await fetch(url, {
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers,
-    },
     ...options,
+    headers,
   });
+
+  if (response.status === 401) {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    window.location.reload();
+    throw new Error('Unauthorized');
+  }
 
   if (!response.ok) {
     let errorMessage = `Request failed: ${response.status}`;
@@ -126,4 +137,13 @@ export const todoApi = {
   async getSummary() {
     return request(`${API_BASE_URL}/summary`);
   },
+};
+
+export const authApi = {
+  async googleLogin(credential) {
+    return request('/api/auth/google', {
+      method: 'POST',
+      body: JSON.stringify({ credential }),
+    });
+  }
 };

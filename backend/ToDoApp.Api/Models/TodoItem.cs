@@ -65,5 +65,12 @@ namespace ToDoApp.Api.Models
 
         /// <summary>Timestamp when the item was last updated (UTC).</summary>
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+
+        /// <summary>Foreign key to the User who owns this task.</summary>
+        [Required]
+        public string UserId { get; set; } = string.Empty;
+
+        /// <summary>Navigation property to the User.</summary>
+        public User? User { get; set; }
     }
 }

@@ -10,6 +10,7 @@ namespace ToDoApp.Api.Data
         }
 
         public DbSet<TodoItem> TodoItems => Set<TodoItem>();
+        public DbSet<User> Users => Set<User>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -91,59 +92,22 @@ namespace ToDoApp.Api.Data
                 entity.HasIndex(e => e.IsCompleted)
                       .HasDatabaseName("IX_TodoItems_IsCompleted");
 
-                // ───── Seed Data ─────
-                entity.HasData(
-                    new TodoItem
-                    {
-                        Id = 1,
-                        Title = "Complete initial project setup",
-                        Description = "Set up backend .NET 9 + frontend React/Vite project structure",
-                        Status = TodoStatus.Completed,
-                        IsCompleted = true,
-                        Priority = TodoPriority.High,
-                        Category = "Development",
-                        CreatedAt = new DateTime(2026, 6, 21, 0, 0, 0, DateTimeKind.Utc),
-                        UpdatedAt = new DateTime(2026, 6, 21, 0, 0, 0, DateTimeKind.Utc)
-                    },
-                    new TodoItem
-                    {
-                        Id = 2,
-                        Title = "Implement CRUD API controller",
-                        Description = "Build Create, Read, Update, Delete, and Toggle endpoints in TodosController",
-                        Status = TodoStatus.InProgress,
-                        IsCompleted = false,
-                        Priority = TodoPriority.High,
-                        Category = "Development",
-                        CreatedAt = new DateTime(2026, 6, 21, 0, 0, 0, DateTimeKind.Utc),
-                        UpdatedAt = new DateTime(2026, 6, 21, 0, 0, 0, DateTimeKind.Utc)
-                    },
-                    new TodoItem
-                    {
-                        Id = 3,
-                        Title = "Design frontend UI",
-                        Description = "Build todo list and input form UI using React components",
-                        Status = TodoStatus.Pending,
-                        IsCompleted = false,
-                        Priority = TodoPriority.Medium,
-                        Category = "Design",
-                        DueDate = new DateTime(2026, 7, 1, 0, 0, 0, DateTimeKind.Utc),
-                        CreatedAt = new DateTime(2026, 6, 21, 0, 0, 0, DateTimeKind.Utc),
-                        UpdatedAt = new DateTime(2026, 6, 21, 0, 0, 0, DateTimeKind.Utc)
-                    },
-                    new TodoItem
-                    {
-                        Id = 4,
-                        Title = "Write unit tests",
-                        Description = "Create xUnit tests for API endpoints and business logic",
-                        Status = TodoStatus.Pending,
-                        IsCompleted = false,
-                        Priority = TodoPriority.Low,
-                        Category = "Testing",
-                        DueDate = new DateTime(2026, 7, 15, 0, 0, 0, DateTimeKind.Utc),
-                        CreatedAt = new DateTime(2026, 6, 21, 0, 0, 0, DateTimeKind.Utc),
-                        UpdatedAt = new DateTime(2026, 6, 21, 0, 0, 0, DateTimeKind.Utc)
-                    }
-                );
+                // ───── Relationships ─────
+                entity.HasOne(e => e.User)
+                      .WithMany()
+                      .HasForeignKey(e => e.UserId)
+                      .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            // ───── User Table Configuration ─────
+            modelBuilder.Entity<User>(entity =>
+            {
+                entity.ToTable("Users");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Email).IsRequired().HasMaxLength(200);
+                entity.Property(e => e.Name).HasMaxLength(200);
+                entity.Property(e => e.GoogleSubjectId).IsRequired();
+                entity.HasIndex(e => e.GoogleSubjectId).IsUnique().HasDatabaseName("IX_Users_GoogleSubjectId");
             });
         }
     }
