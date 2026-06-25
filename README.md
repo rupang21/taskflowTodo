@@ -179,6 +179,17 @@ ToDoApp/
 - **Enum storage**: `TodoStatus` and `TodoPriority` are stored as integers with `HasConversion<int>()` for storage efficiency while maintaining type safety in C#.
 - Full schema documentation available in [`docs/DATABASE_DESIGN.md`](docs/DATABASE_DESIGN.md).
 
+### Security Architecture
+
+- **Google OAuth 2.0 Integration**: Secures the application by ensuring only authenticated users via Google can access their tasks. The backend validates the JWT token provided by Google.
+- **Data Isolation**: The `TodosController` enforces data ownership at the query level (`UserId == CurrentUserId`), meaning users can absolutely only view, edit, and delete their own tasks.
+- **DDoS & Spam Protection (Rate Limiting)**: ASP.NET Core rate limiting middleware is configured globally. It restricts traffic to **100 requests per minute** per client IP, aggressively dropping excess requests with a `429 Too Many Requests` response to prevent server resource exhaustion.
+
+### Testing Architecture
+
+- **Backend (xUnit & Moq)**: The `.NET` API leverages `xUnit` for fast, isolated unit tests. `Microsoft.EntityFrameworkCore.InMemory` is used to mock the SQLite database so tests can run without side effects.
+- **Frontend (Vitest & React Testing Library)**: The React app uses `Vitest` (for seamless Vite integration) and `@testing-library/react`. External dependencies like the Google OAuth component are mocked out to focus exclusively on rendering and component logic.
+
 ---
 
 ## Assumptions & Trade-offs
@@ -188,7 +199,6 @@ ToDoApp/
 | **SQLite over SQL Server** | Zero setup, portable, perfect for take-home evaluation | No concurrent write scaling; would switch to PostgreSQL/SQL Server in production |
 | **`EnsureCreated()` over Migrations** | Eliminates need for `dotnet ef` tooling installation | No schema evolution support; must delete DB to change schema |
 | **Inline React components** | Faster review, clear data flow, minimal file jumping | Would not scale to 20+ components; extract when team grows |
-| **No authentication** | Not required for MVP scope | Every user sees all tasks; add JWT/OAuth for multi-user |
 | **No pagination** | Manageable for typical todo list sizes (< 1000 items) | Would add cursor-based pagination for production datasets |
 | **Server-side filtering** | Reduces data transfer, leverages database indexes | More API surface to maintain; could use OData for complex queries |
 | **Vite proxy for CORS** | Simplest local development setup | Production would need proper CORS policy or reverse proxy |
@@ -202,6 +212,9 @@ ToDoApp/
 - ✅ Full CRUD API with proper HTTP status codes (200, 201, 204, 400, 404, 500)
 - ✅ Input validation with Data Annotations and model state checking
 - ✅ DTO pattern separating internal models from API contracts
+- ✅ Google OAuth 2.0 Integration & Data Isolation
+- ✅ DDoS protection via API Rate Limiting (100 req/min)
+- ✅ Automated Unit Testing (xUnit, Vitest, React Testing Library)
 - ✅ Swagger/OpenAPI documentation auto-generated
 - ✅ Global exception handling with safe error responses
 - ✅ Request logging middleware
@@ -232,15 +245,15 @@ This project is configured for automated CI/CD deployment to [Fly.io](https://fl
 
 ## Future Improvements (TODO)
 
-### 🔒 Security & Access Control (Planned Architecture)
-To restrict access and prevent bot abuse, the following security measures are planned:
-- [ ] **Google OAuth Integration**: Users must authenticate via Google to access the app.
-- [ ] **Email Allowlist (Whitelist)**: A database table of allowed emails. Only pre-approved Google accounts can log in.
-- [ ] **API Rate Limiting**: ASP.NET Core rate limiting middleware to prevent brute-force attacks and bot abuse.
+### 🔒 Security & Access Control
+To restrict access and prevent bot abuse, the following security measures have been implemented or are planned:
+- [x] **Google OAuth Integration**: Users must authenticate via Google to access the app.
+- [ ] **Email Allowlist (Whitelist)**: A database table of allowed emails. Only pre-approved Google accounts can log in. (Planned)
+- [x] **API Rate Limiting**: ASP.NET Core rate limiting middleware prevents brute-force attacks and bot abuse by limiting requests (e.g. 100 requests per minute).
 
 ### Other Improvements
 - [ ] **Pagination & Sorting** — Cursor-based pagination with configurable sort fields for large datasets.
-- [ ] **Unit & Integration Tests** — xUnit tests for controller logic and React Testing Library for components.
+- [x] **Unit & Integration Tests** — xUnit tests for controller logic and React Testing Library for components.
 - [ ] **Soft Delete** — `IsDeleted` + `DeletedAt` fields instead of hard delete.
 - [ ] **Real-time Updates** — SignalR WebSocket integration for live task updates across browser tabs.
 

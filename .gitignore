@@ -4,6 +4,7 @@ backend/**/obj/
 backend/**/*.user
 backend/**/*.suo
 backend/**/*.db
+backend/**/*.db-*
 backend/**/*.sqlite
 
 # Node.js / React

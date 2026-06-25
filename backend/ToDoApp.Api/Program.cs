@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.RateLimiting;
+using System.Threading.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using ToDoApp.Api.Data;
 
@@ -56,6 +58,28 @@ builder.Services.AddAuthentication(Microsoft.AspNetCore.Authentication.JwtBearer
             IssuerSigningKey = new Microsoft.IdentityModel.Tokens.SymmetricSecurityKey(System.Text.Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!))
         };
     });
+builder.Services.AddRateLimiter(options =>
+{
+    options.AddFixedWindowLimiter("GlobalPolicy", policyOptions =>
+    {
+        policyOptions.PermitLimit = 100; // Allow 100 requests
+        policyOptions.Window = TimeSpan.FromMinutes(1); // Per 1 minute
+        policyOptions.QueueProcessingOrder = System.Threading.RateLimiting.QueueProcessingOrder.OldestFirst;
+        policyOptions.QueueLimit = 5; // Allow queueing of 5 extra requests
+    });
+
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.OnRejected = async (context, token) =>
+    {
+        context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
+        await context.HttpContext.Response.WriteAsJsonAsync(new
+        {
+            status = 429,
+            message = "Too many requests. Please try again later."
+        }, token);
+    };
+});
+
 builder.Services.AddAuthorization();
 
 var app = builder.Build();
@@ -97,6 +121,7 @@ app.UseCors("AllowFrontend");
 app.UseDefaultFiles();
 app.UseStaticFiles();
 
+app.UseRateLimiter();
 app.UseAuthorization();
 
 // Request logging middleware
@@ -140,7 +165,7 @@ using (var scope = app.Services.CreateScope())
     dbContext.Database.EnsureCreated();
 }
 
-app.MapControllers();
+app.MapControllers().RequireRateLimiting("GlobalPolicy");
 
 // SPA fallback: serve index.html for non-API routes (React Router support)
 app.MapFallbackToFile("index.html");
