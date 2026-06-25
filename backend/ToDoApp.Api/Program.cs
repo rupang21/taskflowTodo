@@ -126,6 +126,17 @@ using (var scope = app.Services.CreateScope())
             Directory.CreateDirectory(dbDir);
     }
 
+    try
+    {
+        // Check if Users table exists. If not, it means it's an old schema.
+        _ = dbContext.Users.FirstOrDefault();
+    }
+    catch
+    {
+        // Old database schema detected. Drop it and start fresh.
+        dbContext.Database.EnsureDeleted();
+    }
+
     dbContext.Database.EnsureCreated();
 }
 
