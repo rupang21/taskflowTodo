@@ -9,6 +9,9 @@
 FROM node:22-alpine AS frontend-build
 WORKDIR /app/frontend
 
+ARG VITE_GOOGLE_CLIENT_ID
+ENV VITE_GOOGLE_CLIENT_ID=$VITE_GOOGLE_CLIENT_ID
+
 # Install dependencies first (layer caching)
 COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci --silent

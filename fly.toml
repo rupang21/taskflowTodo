@@ -7,6 +7,11 @@ app = 'taskflow-todo'
 primary_region = 'nrt'
 
 [build]
+  [build.args]
+    VITE_GOOGLE_CLIENT_ID = "826409419989-06c8u9htmrr9n496kckl1dt1fois3344.apps.googleusercontent.com"
+
+[env]
+  Authentication__Google__ClientId = "826409419989-06c8u9htmrr9n496kckl1dt1fois3344.apps.googleusercontent.com"
 
 [http_service]
   internal_port = 8080
